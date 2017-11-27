@@ -19,15 +19,9 @@ def affine_forward(x, w, b):
   - out: output, of shape (N, M)
   - cache: (x, w, b)
   """
-  out = None
-  #############################################################################
-  # TODO: Implement the affine forward pass. Store the result in out. You     #
-  # will need to reshape the input into rows.                                 #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  n_rows = x.shape[0]
+  x2 = x.reshape(n_rows, w.shape[0])
+  out = x2.dot(w) + b
   cache = (x, w, b)
   return out, cache
 
@@ -40,7 +34,7 @@ def affine_backward(dout, cache):
   - dout: Upstream derivative, of shape (N, M)
   - cache: Tuple of:
     - x: Input data, of shape (N, d_1, ... d_k)
-    - w: Weights, of shape (D, M)
+    - w: Weights, of shape (D, M)\
 
   Returns a tuple of:
   - dx: Gradient with respect to x, of shape (N, d1, ..., d_k)
@@ -48,14 +42,11 @@ def affine_backward(dout, cache):
   - db: Gradient with respect to b, of shape (M,)
   """
   x, w, b = cache
-  dx, dw, db = None, None, None
-  #############################################################################
-  # TODO: Implement the affine backward pass.                                 #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  dx = dout.dot(w.T).reshape(x.shape)
+  x2 = x.reshape(x.shape[0],
+                 w.shape[0])
+  dw = x2.T.dot(dout)
+  db = np.sum(dout, axis=0)
   return dx, dw, db
 
 
@@ -71,14 +62,9 @@ def relu_forward(x):
   - cache: x
   """
   out = None
-  #############################################################################
-  # TODO: Implement the ReLU forward pass.                                    #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
   cache = x
+  out = x.copy()
+  out[out < 0] = 0
   return out, cache
 
 
@@ -94,13 +80,8 @@ def relu_backward(dout, cache):
   - dx: Gradient with respect to x
   """
   dx, x = None, cache
-  #############################################################################
-  # TODO: Implement the ReLU backward pass.                                   #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  dx = dout.copy()
+  dx[x < 0] = 0
   return dx
 
 
@@ -404,10 +385,6 @@ def max_pool_forward_naive(x, pool_param):
   #############################################################################
   # TODO: Implement the max pooling forward pass                              #
   #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
   cache = (x, pool_param)
   return out, cache
 
@@ -545,7 +522,7 @@ def softmax_loss(x, y):
   - dx: Gradient of the loss with respect to x
   """
   probs = np.exp(x - np.max(x, axis=1, keepdims=True))
-  probs /= np.sum(probs, axis=1, keepdims=True)
+  probs /= np.sum(probs, axis=1, keepdims=True)  # sum to 1
   N = x.shape[0]
   loss = -np.sum(np.log(probs[np.arange(N), y])) / N
   dx = probs.copy()

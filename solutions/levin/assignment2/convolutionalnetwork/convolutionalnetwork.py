@@ -26,7 +26,7 @@ from assignment2.cs231n.fast_layers import *
 from assignment2.cs231n.classifiers.cnn import *
 from assignment2.cs231n.classifiers.fc_net import *
 # import time
-from scipy.misc import imread, imresize
+from scipy.imageio import imread, imresize
 from cs231n.fast_layers import conv_forward_fast, conv_backward_fast
 from time import time
 

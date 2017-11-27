@@ -9,7 +9,7 @@ class Solver(object):
   models. The Solver performs stochastic gradient descent using different
   update rules defined in optim.py.
 
-  The solver accepts both training and validataion data and labels so it can
+  The solver accepts both training and validation data and labels so it can
   periodically check classification accuracy on both training and validation
   data to watch out for overfitting.
 
@@ -71,7 +71,8 @@ class Solver(object):
       names to gradients of the loss with respect to those parameters.
   """
 
-  def __init__(self, model, data, **kwargs):
+  def __init__(self, model, data, update_rule='sgd',
+               **kwargs):
     """
     Construct a new Solver instance.
     
@@ -107,7 +108,7 @@ class Solver(object):
     self.y_val = data['y_val']
     
     # Unpack keyword arguments
-    self.update_rule = kwargs.pop('update_rule', 'sgd')
+    self.update_rule = update_rule
     self.optim_config = kwargs.pop('optim_config', {})
     self.lr_decay = kwargs.pop('lr_decay', 1.0)
     self.batch_size = kwargs.pop('batch_size', 100)
@@ -149,12 +150,8 @@ class Solver(object):
       d = {k: v for k, v in self.optim_config.iteritems()}
       self.optim_configs[p] = d
 
-
   def _step(self):
-    """
-    Make a single gradient update. This is called by train() and should not
-    be called manually.
-    """
+    """Make a single gradient update. This is called by train() and should not be called manually."""
     # Make a minibatch of training data
     num_train = self.X_train.shape[0]
     batch_mask = np.random.choice(num_train, self.batch_size)
@@ -168,6 +165,7 @@ class Solver(object):
     # Perform a parameter update
     for p, w in self.model.params.iteritems():
       dw = grads[p]
+      # print 'grads for {}: max: {}, min: {}'.format(p, dw.max(), dw.min())
       config = self.optim_configs[p]
       next_w, next_config = self.update_rule(w, dw, config)
       self.model.params[p] = next_w
@@ -228,8 +226,8 @@ class Solver(object):
 
       # Maybe print training loss
       if self.verbose and t % self.print_every == 0:
-        print '(Iteration %d / %d) loss: %f' % (
-               t + 1, num_iterations, self.loss_history[-1])
+        print( '(Iteration %d / %d) loss: %f' % (
+               t + 1, num_iterations, self.loss_history[-1]))
 
       # At the end of every epoch, increment the epoch counter and decay the
       # learning rate.
@@ -251,8 +249,8 @@ class Solver(object):
         self.val_acc_history.append(val_acc)
 
         if self.verbose:
-          print '(Epoch %d / %d) train acc: %f; val_acc: %f' % (
-                 self.epoch, self.num_epochs, train_acc, val_acc)
+          print( '(Epoch %d / %d) train acc: %f; val_acc: %f' % (
+                 self.epoch, self.num_epochs, train_acc, val_acc))
 
         # Keep track of the best model
         if val_acc > self.best_val_acc:

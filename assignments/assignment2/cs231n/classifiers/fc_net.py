@@ -222,7 +222,8 @@ class FullyConnectedNet(object):
             backward_func = affine_backward
         else:
             backward_func = affine_relu_backward
-        if self.use_dropout and layer
+        if self.use_dropout and layer in dropout_cache:
+            dx = dropout_backward(dx, dropout_cache[layer])
         dx, dw, db = backward_func(dx, cache_dict[layer])
         grads['W{}'.format(layer)] = dw + self.reg * self.params['W{}'.format(layer)]
         grads['b{}'.format(layer)] = db

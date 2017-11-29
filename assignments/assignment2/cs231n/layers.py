@@ -253,35 +253,18 @@ def dropout_forward(x, dropout_param):
   p, mode = dropout_param['p'], dropout_param['mode']
   if 'seed' in dropout_param:
     np.random.seed(dropout_param['seed'])
-
-  mask = None
-  out = None
-
+  mask = (np.random.rand(*x.shape) < p) / p
   if mode == 'train':
-    ###########################################################################
-    # TODO: Implement the training phase forward pass for inverted dropout.   #
-    # Store the dropout mask in the mask variable.                            #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                            END OF YOUR CODE                             #
-    ###########################################################################
+    out = x * mask
   elif mode == 'test':
-    ###########################################################################
-    # TODO: Implement the test phase forward pass for inverted dropout.       #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                            END OF YOUR CODE                             #
-    ###########################################################################
-
+    out = x
   cache = (dropout_param, mask)
   out = out.astype(x.dtype, copy=False)
 
   return out, cache
 
 
-def dropout_backward(dout, cache):
+def dropout_backward(dout, dropout_cache):
   """
   Perform the backward pass for (inverted) dropout.
 
@@ -289,18 +272,11 @@ def dropout_backward(dout, cache):
   - dout: Upstream derivatives, of any shape
   - cache: (dropout_param, mask) from dropout_forward.
   """
-  dropout_param, mask = cache
+  dropout_param, mask = dropout_cache
   mode = dropout_param['mode']
-  
-  dx = None
+
   if mode == 'train':
-    ###########################################################################
-    # TODO: Implement the training phase backward pass for inverted dropout.  #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                            END OF YOUR CODE                             #
-    ###########################################################################
+    dx = dout * mask
   elif mode == 'test':
     dx = dout
   return dx

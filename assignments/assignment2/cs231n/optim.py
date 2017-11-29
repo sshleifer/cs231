@@ -120,7 +120,6 @@ def adam(x, dx, config={}):
   m = config['m']
   v = config['v']
   t = config['t'] + 1
-  #learning_rate = config['learning_rate']
 
   m = (beta1 * m) + (1 - beta1) * dx
   mt = m / (1 - beta1 ** t)

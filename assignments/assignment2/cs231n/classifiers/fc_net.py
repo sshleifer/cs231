@@ -202,14 +202,6 @@ class FullyConnectedNet(object):
         cache_dict[layer] = cache
     scores = x
                                                          #
-    # When using dropout, you'll need to pass self.dropout_param to each       #
-    # dropout forward pass.                                                    #
-    #                                                                          #
-    # When using batch normalization, you'll need to pass self.bn_params[0] to #
-    # the forward pass for the first batch normalization layer, pass           #
-    # self.bn_params[1] to the forward pass for the second batch normalization #
-    # layer, etc.                                                              #
-    # If test mode return early
     if mode == 'test':
       return scores
 

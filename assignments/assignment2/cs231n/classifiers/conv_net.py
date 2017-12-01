@@ -4,35 +4,32 @@ import torch.optim as optim
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
+from tqdm import tqdm
 
-class ThreeLayerTorchNet(nn.Module):
-    def __init__(self, num_filters=32, filter_size=7,
-                 input_dim=(3, 32, 32), hidden_dim=100, num_classes=32):
-        super(ThreeLayerTorchNet, self).__init__()
-        # input_dim  = (49000, 3, 32, 32)
-        pool_height = 2
-        C, H, W = input_dim
-        self.conv1 = nn.Conv2d(C, num_filters, filter_size,
-                               stride=1, padding=3)
-        # self.max_pool= nn.MaxPool2d(pool_height)
-        output_dim = (32 * 32 / pool_height * 32 / pool_height) / 4.
-        self.affine1 = nn.Linear(output_dim, hidden_dim)
-        self.affine2 = nn.Linear(hidden_dim, num_classes)
 
-    def forward(self, x):
-        x = self.conv1(x)
-        x = F.max_pool2d(x, 2)
-        x = self.affine1(x)
-        x = nn.ReLU(x)
-        x = self.affine2(x)
-        return x
 
 def train(epoch, X, y, batch_size=64):
-    Xbatch = np.array_split(X, int(X/batch_size))
-    ybatch = np.array_split(y, int(X/batch_size))
-
-    for batch_idx, (xbatch, target) in enumerate(zip(Xbatch, ybatch)):
-        x, y = Variable(xbatch), Variable(ybatch)
+    # Xbatch = np.array_split(X, int(X/batch_size))
+    # ybatch = np.array_split(y, int(X/batch_size))
+    model = ThreeLayerTorchNet()
+    train_scores = []
+    val_scores = []
+    optimizer = optim.Adam(model.parameters())
+    for step in tqdm(range(1000)):
+        offset = (step * batch_size) % (y.shape[0] - batch_size)
+        xbatch = X[offset:(offset + batch_size)]
+        ybatch = y[offset:(offset + batch_size)]
+        xt = Variable(torch.FloatTensor(xbatch))
+        yt = Variable(torch.LongTensor(ybatch))
+        optimizer.zero_grad()
+        # print xt.data.shape
+        output = model(xt)
+        loss = F.nll_loss(F.log_softmax(output), yt)
+        loss.backward()
+        optimizer.step()
+        #     if step % 50 == 0:
+        #         train_scores.append(model.funcy_scorer(X,y))
+        #         val_scores.append(model.funcy_scorer(data['X_val'], data['y_val']))
 
 
 import torch.optim as optim

@@ -1,4 +1,4 @@
-import cPickle as pickle
+#import cPickle as pickle
 import numpy as np
 import os
 #from scipy.misc import imread
@@ -6,8 +6,11 @@ import os
 
 def load_CIFAR_batch(filename):
   """ load single batch of cifar """
+  import pickle
   with open(filename, 'rb') as f:
-    datadict = pickle.load(f)
+    u = pickle._Unpickler(f)
+    u.encoding = 'latin1'
+    datadict = u.load() # python3
     X = datadict['data']
     Y = datadict['labels']
     X = X.reshape(10000, 3, 32, 32).transpose(0,2,3,1).astype("float")
@@ -20,24 +23,26 @@ def load_CIFAR10(ROOT):
   ys = []
   for b in range(1,6):
     f = os.path.join(ROOT, 'data_batch_%d' % (b, ))
+    print(f)
     X, Y = load_CIFAR_batch(f)
     xs.append(X)
-    ys.append(Y)    
+    ys.append(Y)
   Xtr = np.concatenate(xs)
   Ytr = np.concatenate(ys)
   del X, Y
   Xte, Yte = load_CIFAR_batch(os.path.join(ROOT, 'test_batch'))
   return Xtr, Ytr, Xte, Yte
 
-
-def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000):
+cifar10_dir = 'cs231n/datasets/cifar-10-batches-py'
+def get_CIFAR10_data(num_training=49000, num_validation=1000,
+                     num_test=1000):
     """
     Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
     it for classifiers. These are the same steps as we used for the SVM, but
     condensed to a single function.
     """
     # Load the raw CIFAR-10 data
-    cifar10_dir = 'cs231n/datasets/cifar-10-batches-py'
+
     X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
         
     # Subsample the data

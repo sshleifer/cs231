@@ -61,16 +61,15 @@ def train_torchnet(X, y, batch_size=100, n_batches=np.inf, weight_decay=1e-3,
                     loss = loss.cuda()
     return model
 
-def make_conv_block(num_filters, filter_size=5,
+def make_conv_block(num_filters, filter_size=3,
                     C=3, padding=1, pool_height=2):
-    layers = []
 
     conv = nn.Conv2d(C, num_filters, filter_size,
                      stride=1, padding=padding)
     layers = [conv,
               nn.BatchNorm2d(num_filters),
               nn.ReLU(inplace=True),
-              nn.MaxPool2d(pool_height)]
+              nn.MaxPool2d(pool_height,stride=2)]
     return nn.Sequential(*layers)
 
 
@@ -82,7 +81,7 @@ class ThreeLayerTorchNet(nn.Module):
 
 
 
-    def __init__(self, num_filters=32, filter_size=7, padding=3,
+    def __init__(self, num_filters=32, filter_size=3, padding=3,
                  pool_height=2,
                  input_dim=(3, 32, 32), hidden_dim=100, num_classes=10):
         super(ThreeLayerTorchNet, self).__init__()
@@ -91,24 +90,36 @@ class ThreeLayerTorchNet(nn.Module):
         # input_dim  = (49000, 3, 32, 32)
         self.pool_height = pool_height
         C, H, W = input_dim
+
         self.conv1 = make_conv_block(num_filters, filter_size, padding=padding,
                                      pool_height=pool_height)
-        Hout = (input_dim[1] - filter_size + 2 * padding) + 1
 
-        self.output_dim = int((num_filters * Hout / pool_height * Hout / pool_height))
+
+
+        # self.output_dim1 = int((num_filters * Hout / pool_height * Hout / pool_height))
+        nf2 = 128
+        self.conv2 = make_conv_block(num_filters *2, filter_size, padding=padding,
+                                     C=num_filters)
+        Hout = (num_filters - filter_size + 2 * padding) + 1
+        print(Hout)
+        # self.output_dim2 = int((nf2 * Hout / pool_height * Hout / pool_height))
+        self.output_dim2 = int(8192 / 2)
+        self.conv3 = make_conv_block(num_filters * 4, filter_size, padding=padding,
+                                     C=num_filters*2)
         #self.batch_norm1 = torch.nn.BatchNorm2d(num_filters)
         #self.conv2 = nn.Conv2D
 
-        print(Hout, self.output_dim)
-        self.affine1 = nn.Linear(self.output_dim, hidden_dim)
+        print(Hout, self.output_dim2)
+        self.affine1 = nn.Linear(self.output_dim2, hidden_dim)
         self.batch_norm_fc = torch.nn.BatchNorm1d(hidden_dim)
         self.affine2 = nn.Linear(hidden_dim, num_classes)
 
 
     def forward(self, x):
         x = self.conv1(x)
-
-        x = x.view(-1, self.output_dim)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = x.view(-1, self.output_dim2)
         x = F.relu(self.batch_norm_fc(self.affine1(x)))
         x = F.dropout(x, training=self.training)
         x = self.affine2(x)

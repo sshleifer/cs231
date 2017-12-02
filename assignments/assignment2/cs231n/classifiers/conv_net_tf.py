@@ -2,27 +2,48 @@ import tensorflow as tf
 
 num_classes=10
 BATCH_SIZE = 100
+NUM_HIDDEN=100
+L2_MULTIPLIER = .001
 
-def cnn_model(features, labels, mode=tf.estimator.ModeKeys.TRAIN):
+def put_channel_last(X):
+    return X.swapaxes(1, 3).swapaxes(2, 1)
 
+
+def cnn_model(features, labels, mode):
     conv1 = tf.layers.conv2d(tf.cast(features['x'], tf.float32), 32,
                              kernel_size=7, activation=tf.nn.relu,
                              padding='same', kernel_initializer=tf.truncated_normal_initializer
                              )
     pool1 = tf.layers.max_pooling2d(conv1, pool_size=[2, 2], strides=2, padding='same')
-    print pool1
+
     # output_dim = (32 * 32 / pool_height * 32 / pool_height)
     pool1_flat = tf.reshape(pool1, [BATCH_SIZE, 32 * 16*16])#, [features['x'].shape[0], -1])
-
-    logits = tf.layers.dense(inputs=pool1_flat, units=num_classes)
+    hidden1 = tf.layers.dense(inputs=pool1_flat, units=NUM_HIDDEN,
+                              activation=tf.nn.relu)
+    logits = tf.layers.dense(inputs=hidden1, units=num_classes)
 
     predictions = {
         'classes': tf.arg_max(logits, 1),
         'probabilities': tf.nn.softmax(logits, name='softmax_tensor')
     }
+    if mode == tf.estimator.ModeKeys.PREDICT:
+        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
+
+    vars = tf.trainable_variables()
+    lossL2 = tf.add_n([tf.nn.l2_loss(v)
+                       for v in vars
+                       if 'bias' not in v.name])
     one_hot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=num_classes)
-    loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits)
-    assert mode == tf.estimator.ModeKeys.TRAIN
+    data_loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits)
+    loss = tf.add(data_loss, lossL2 * L2_MULTIPLIER, name='total_loss')
+    if mode == tf.estimator.ModeKeys.EVAL:
+        eval_metrics = {
+            'accuracy': tf.metrics.accuracy(labels, predictions['classes'])
+        }
+        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions,
+                                          loss=loss,
+                                          eval_metric_ops=eval_metrics)
+
     optimizer = tf.train.AdamOptimizer(learning_rate=.0001)
     train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
     return tf.estimator.EstimatorSpec(mode=mode,

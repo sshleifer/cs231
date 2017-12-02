@@ -7,15 +7,15 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 
-
-def train(epoch, X, y, batch_size=64):
+def train_torchnet(X, y, batch_size=100, n_batches=1000,weight_decay=1e-3,
+                   **model_kwargs):
     # Xbatch = np.array_split(X, int(X/batch_size))
     # ybatch = np.array_split(y, int(X/batch_size))
-    model = ThreeLayerTorchNet()
+    model = ThreeLayerTorchNet(**model_kwargs)
     train_scores = []
     val_scores = []
-    optimizer = optim.Adam(model.parameters())
-    for step in tqdm(range(1000)):
+    optimizer = optim.Adam(model.parameters(), weight_decay=weight_decay)
+    for step in tqdm(range(n_batches)):
         offset = (step * batch_size) % (y.shape[0] - batch_size)
         xbatch = X[offset:(offset + batch_size)]
         ybatch = y[offset:(offset + batch_size)]
@@ -30,10 +30,7 @@ def train(epoch, X, y, batch_size=64):
         #     if step % 50 == 0:
         #         train_scores.append(model.funcy_scorer(X,y))
         #         val_scores.append(model.funcy_scorer(data['X_val'], data['y_val']))
-
-
-import torch.optim as optim
-import torch.nn.functional as F
+    return model
 
 
 class ThreeLayerTorchNet(nn.Module):
@@ -57,7 +54,7 @@ class ThreeLayerTorchNet(nn.Module):
         x = self.affine2(x)
         return x
 
-    def funcy_scorer(seprilf, X, y):
+    def funcy_scorer(self, X, y):
         probas = self.forward(Variable(torch.FloatTensor(X)))
         y = Variable(torch.LongTensor(y))
         probas, indices = torch.max(probas.data, 1)

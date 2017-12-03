@@ -250,3 +250,6 @@ class PretrainedCNN(object):
     dX, grads = self.backward(dscores, cache)
     return loss, grads
 
+
+
+

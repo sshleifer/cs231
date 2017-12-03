@@ -61,6 +61,7 @@ def train_torchnet(X, y, batch_size=100, n_batches=np.inf, weight_decay=1e-3,
                     loss = loss.cuda()
     return model
 
+
 def make_conv_block(num_filters, filter_size=3,
                     C=3, padding=1, pool_height=2):
 
@@ -69,7 +70,7 @@ def make_conv_block(num_filters, filter_size=3,
     layers = [conv,
               nn.BatchNorm2d(num_filters),
               nn.ReLU(inplace=True),
-              nn.MaxPool2d(pool_height,stride=2)]
+              nn.MaxPool2d(pool_height, stride=2)]
     return nn.Sequential(*layers)
 
 

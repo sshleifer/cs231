@@ -135,7 +135,7 @@ def adam(x, dx, config={}):
 
   return next_x, config
 
-  
-  
-  
+
+
+
 

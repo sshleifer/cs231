@@ -65,7 +65,7 @@ class PretrainedCNN(object):
     """
     Load pretrained weights from an HDF5 file.
 
-    Inputs:
+    Inputs:}
     - h5_file: Path to the HDF5 file where pretrained weights are stored.
     - verbose: Whether to print debugging info
     """

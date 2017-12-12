@@ -73,14 +73,14 @@ class CaptioningRNN(object):
       self.params[k] = v.astype(self.dtype)
 
 
-  def loss(self, features, captions):
+  def loss(self, img_features, captions):
     """
     Compute training-time loss for the RNN. We input image features and
     ground-truth captions for those images, and use an RNN (or LSTM) to compute
     loss and gradients on all parameters.
     
     Inputs:
-    - features: Input image features, of shape (N, D)
+    - img_features: Input image features, of shape (N, D)
     - captions: Ground-truth captions; an integer array of shape (N, T) where
       each element is in the range 0 <= y[i, t] < V
       
@@ -112,15 +112,17 @@ class CaptioningRNN(object):
 
     # Weight and bias for the hidden-to-vocab transformation.
     W_vocab, b_vocab = self.params['W_vocab'], self.params['b_vocab']
-    
+    cache = {}
     loss, grads = 0.0, {}
     ############################################################################
     # TODO: Implement the forward and backward passes for the CaptioningRNN.   #
     # In the forward pass you will need to do the following:                   #
     # (1) Use an affine transformation to compute the initial hidden state     #
     #     from the image features. This should produce an array of shape (N, H)#
+    input_for_hidden, cache['W_proj'] = affine_forward(img_features, W_proj)
     # (2) Use a word embedding layer to transform the words in captions_in     #
     #     from indices to vectors, giving an array of shape (N, T, W).         #
+    word_vectors = word_embedding_forward(p\)
     # (3) Use either a vanilla RNN or LSTM (depending on self.cell_type) to    #
     #     process the sequence of input word vectors and produce hidden state  #
     #     vectors for all timesteps, producing an array of shape (N, T, H).    #

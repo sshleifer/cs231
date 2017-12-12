@@ -1,11 +1,10 @@
 import numpy as np
+"""This file defines layer types that are commonly used for recurrent neural networks."""
 
-
-"""
-This file defines layer types that are commonly used for recurrent neural
-networks.
-"""
-
+def rel_error(x, y):
+    """ returns relative error """
+    assert  x.shape == y.shape, 'x.shape={} but y.shape={}'.format(x.shape, y.shape)
+    return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
 
 def rnn_step_forward(x, prev_h, Wx, Wh, b):
   """
@@ -26,104 +25,101 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
   - next_h: Next hidden state, of shape (N, H)
   - cache: Tuple of values needed for the backward pass.
   """
-  next_h, cache = None, None
-  ##############################################################################
-  # TODO: Implement a single forward step for the vanilla RNN. Store the next  #
-  # hidden state and any values you need for the backward pass in the next_h   #
-  # and cache variables respectively.                                          #
-  ##############################################################################
-  pass
-  ##############################################################################
-  #                               END OF YOUR CODE                             #
-  ##############################################################################
+  h_component = prev_h.dot(Wh)
+  x_component = x.dot(Wx)#.dot(x)
+  out_val = h_component + x_component + b
+  next_h = np.tanh(out_val)
+  cache = (prev_h, x, b, Wh, Wx, next_h)
   return next_h, cache
 
 
+
 def rnn_step_backward(dnext_h, cache):
-  """
-  Backward pass for a single timestep of a vanilla RNN.
-  
-  Inputs:
-  - dnext_h: Gradient of loss with respect to next hidden state
-  - cache: Cache object from the forward pass
-  
-  Returns a tuple of:
-  - dx: Gradients of input data, of shape (N, D)
-  - dprev_h: Gradients of previous hidden state, of shape (N, H)
-  - dWx: Gradients of input-to-hidden weights, of shape (N, H)
-  - dWh: Gradients of hidden-to-hidden weights, of shape (H, H)
-  - db: Gradients of bias vector, of shape (H,)
-  """
-  dx, dprev_h, dWx, dWh, db = None, None, None, None, None
-  ##############################################################################
-  # TODO: Implement the backward pass for a single step of a vanilla RNN.      #
-  #                                                                            #
-  # HINT: For the tanh function, you can compute the local derivative in terms #
-  # of the output value from tanh.                                             #
-  ##############################################################################
-  pass
-  ##############################################################################
-  #                               END OF YOUR CODE                             #
-  ##############################################################################
-  return dx, dprev_h, dWx, dWh, db
+    """
+    Backward pass for a single timestep of a vanilla RNN.
+
+    Inputs:
+    - dnext_h: Gradient of loss with respect to next hidden state
+    - cache: Cache object from the forward pass
+
+    Returns a tuple of:
+    - dx: Gradients of input data, of shape (N, D)
+    - dprev_h: Gradients of previous hidden state, of shape (N, H)
+    - dWx: Gradients of input-to-hidden weights, of shape (N, H)
+    - dWh: Gradients of hidden-to-hidden weights, of shape (H, H)
+    - db: Gradients of bias vector, of shape (H,)
+    """
+    prev_h, x, b, Wh, Wx, forward = cache
+    dforward = (1 - np.tanh(forward) ** 2) * dnext_h
+    dWx = x.T.dot(dforward)
+    dx = Wx.dot(dforward.T).T
+    db = dforward.sum(0)
+    dWh = prev_h.T.dot(dforward)
+    dprev_h = Wh.dot(dforward.T).T
+    return dx, dprev_h, dWx, dWh, db
 
 
 def rnn_forward(x, h0, Wx, Wh, b):
-  """
-  Run a vanilla RNN forward on an entire sequence of data. We assume an input
-  sequence composed of T vectors, each of dimension D. The RNN uses a hidden
-  size of H, and we work over a minibatch containing N sequences. After running
-  the RNN forward, we return the hidden states for all timesteps.
-  
-  Inputs:
-  - x: Input data for the entire timeseries, of shape (N, T, D).
-  - h0: Initial hidden state, of shape (N, H)
-  - Wx: Weight matrix for input-to-hidden connections, of shape (D, H)
-  - Wh: Weight matrix for hidden-to-hidden connections, of shape (H, H)
-  - b: Biases of shape (H,)
-  
-  Returns a tuple of:
-  - h: Hidden states for the entire timeseries, of shape (N, T, H).
-  - cache: Values needed in the backward pass
-  """
-  h, cache = None, None
-  ##############################################################################
-  # TODO: Implement forward pass for a vanilla RNN running on a sequence of    #
-  # input data. You should use the rnn_step_forward function that you defined  #
-  # above.                                                                     #
-  ##############################################################################
-  pass
-  ##############################################################################
-  #                               END OF YOUR CODE                             #
-  ##############################################################################
-  return h, cache
+    """
+    Run a vanilla RNN forward on an entire sequence of data. We assume an input
+    sequence composed of T vectors, each of dimension D. The RNN uses a hidden
+    size of H, and we work over a minibatch containing N sequences. After running
+    the RNN forward, we return the hidden states for all timesteps.
 
+    Inputs:
+    - x: Input data for the entire timeseries, of shape (N, T, D).
+    - h0: Initial hidden state, of shape (N, H)
+    - Wx: Weight matrix for input-to-hidden connections, of shape (D, H)
+    - Wh: Weight matrix for hidden-to-hidden connections, of shape (H, H)
+    - b: Biases of shape (H,)
+
+    Returns a tuple of:
+    - h: Hidden states for the entire timeseries, of shape (N, T, H).
+    - cache: Values needed in the backward pass
+    """
+    prev_h = h0
+    h = []
+    cache = []
+    for i in range(x.shape[1]):
+        next_h, cache_next = rnn_step_forward(x[:, i, :],
+                                              prev_h, Wx, Wh, b)
+        h.append(next_h)
+        next_h.shape
+        prev_h = next_h
+        cache.append(cache_next)
+
+    return np.array(h).transpose(1, 0, 2), cache
 
 def rnn_backward(dh, cache):
-  """
-  Compute the backward pass for a vanilla RNN over an entire sequence of data.
-  
-  Inputs:
-  - dh: Upstream gradients of all hidden states, of shape (N, T, H)
-  
-  Returns a tuple of:
-  - dx: Gradient of inputs, of shape (N, T, D)
-  - dh0: Gradient of initial hidden state, of shape (N, H)
-  - dWx: Gradient of input-to-hidden weights, of shape (D, H)
-  - dWh: Gradient of hidden-to-hidden weights, of shape (H, H)
-  - db: Gradient of biases, of shape (H,)
-  """
-  dx, dh0, dWx, dWh, db = None, None, None, None, None
-  ##############################################################################
-  # TODO: Implement the backward pass for a vanilla RNN running an entire      #
-  # sequence of data. You should use the rnn_step_backward function that you   #
-  # defined above.                                                             #
-  ##############################################################################
-  pass
-  ##############################################################################
-  #                               END OF YOUR CODE                             #
-  ##############################################################################
-  return dx, dh0, dWx, dWh, db
+    """
+    Compute the backward pass for a vanilla RNN over an entire sequence of data.
+
+    Inputs:
+    - dh: Upstream gradients of all hidden states, of shape (N, T, H)
+
+    Returns a tuple of:
+    - dx: Gradient of inputs, of shape (N, T, D)
+    - dh0: Gradient of initial hidden state, of shape (N, H)
+    - dWx: Gradient of input-to-hidden weights, of shape (D, H)
+    - dWh: Gradient of hidden-to-hidden weights, of shape (H, H)
+    - db: Gradient of biases, of shape (H,)
+    """
+    N,T,D = dh.shape
+    print N,T,D
+    #grads_dprev_h = np.random.randn(N, H)
+    dx = np.random.randn(N, T, D)
+    # grads_dwx = np.random.randn(D, H)
+    # grads_dwh = np.random.randn(H, H)
+    # grads_db = np.random.randn(H)
+    for i in reversed(range(T)):
+        tmp_dx, dprev_h, dWx, dWh, db = rnn_step_backward(dh[:, i], cache[i])
+        print tmp_dx.shape
+        dx[:,i,:] = tmp_dx
+        print dx.shape
+    for v in [dx, dprev_h, dWx, dWh, db]:
+        print v.shape
+
+    return dx, dprev_h, dWx, dWh, db
 
 
 def word_embedding_forward(x, W):

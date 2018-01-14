@@ -3,7 +3,7 @@ import numpy as np
 
 def rel_error(x, y):
     """ returns relative error """
-    assert x.shape == y.shape, 'x.shape={} but y.shape={}'.format(x.shape, y.shape)
+    assert x.shape == y.shape, 'left shape={} but right shape={}'.format(x.shape, y.shape)
     return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
 
 
@@ -160,31 +160,23 @@ def rnn_backward(dh, cache):
 
 
 def word_embedding_forward(x, W):
-  """
-  Forward pass for word embeddings. We operate on minibatches of size N where
-  each sequence has length T. We assume a vocabulary of V words, assigning each
-  to a vector of dimension D.
-  
-  Inputs:
-  - x: Integer array of shape (N, T) giving indices of words. Each element idx
+    """
+    Forward pass for word embeddings. We operate on minibatches of size N where
+    each sequence has length T. We assume a vocabulary of V words, assigning each
+    to a vector of dimension D.
+
+    Inputs:
+    - x: Integer array of shape (N, T) giving indices of words. Each element idx
     of x muxt be in the range 0 <= idx < V.
-  - W: Weight matrix of shape (V, D) giving word vectors for all words.
-  
-  Returns a tuple of:
-  - out: Array of shape (N, T, D) giving word vectors for all input words.
-  - cache: Values needed for the backward pass
-  """
-  out, cache = None, None
-  ##############################################################################
-  # TODO: Implement the forward pass for word embeddings.                      #
-  #                                                                            #
-  # HINT: This should be very simple.                                          #
-  ##############################################################################
-  pass
-  ##############################################################################
-  #                               END OF YOUR CODE                             #
-  ##############################################################################
-  return out, cache
+    - W: Weight matrix of shape (V, D) giving word vectors for all words.
+
+    Returns a tuple of:
+    - out: Array of shape (N, T, D) giving word vectors for all input words.
+    - cache: Values needed for the backward pass
+    """
+    out = W[x,:]
+    cache = (x, W, out)
+    return out, cache
 
 
 def word_embedding_backward(dout, cache):
@@ -202,16 +194,10 @@ def word_embedding_backward(dout, cache):
   Returns:
   - dW: Gradient of word embedding matrix, of shape (V, D).
   """
-  dW = None
-  ##############################################################################
-  # TODO: Implement the backward pass for word embeddings.                     #
-  #                                                                            #
-  # HINT: Look up the function np.add.at                                       #
-  ##############################################################################
-  pass
-  ##############################################################################
-  #                               END OF YOUR CODE                             #
-  ##############################################################################
+  #N,T,D = dout.shape
+  x, W, out = cache
+  dW = np.zeros_like(W)
+  np.add.at(dW, x, dout)
   return dW
 
 

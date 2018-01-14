@@ -28,9 +28,9 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
   """
   h_component = prev_h.dot(Wh)
   x_component = x.dot(Wx)#.dot(x)
-  out_val = h_component + x_component + b
-  next_h = np.tanh(out_val)
-  cache = (prev_h, x, b, Wh, Wx, next_h)
+  forward = h_component + x_component + b
+  next_h = np.tanh(forward)
+  cache = (prev_h, x, Wh, Wx, forward)
   return next_h, cache
 
 
@@ -50,13 +50,14 @@ def rnn_step_backward(dnext_h, cache):
     - dWh: Gradients of hidden-to-hidden weights, of shape (H, H)
     - db: Gradients of bias vector, of shape (H,)
     """
-    prev_h, x, b, Wh, Wx, forward = cache
+    prev_h, x,  Wh, Wx, forward = cache
     dforward = (1 - np.tanh(forward) ** 2) * dnext_h
-    dWx = x.T.dot(dforward)
-    dx = Wx.dot(dforward.T).T
+    # dx = Wx.dot(dforward.T).T
+    dx = np.dot(dforward, Wx.T)
+
     db = dforward.sum(0)
     dWh = prev_h.T.dot(dforward)
-    dprev_h = Wh.dot(dforward.T).T
+    dprev_h = np.dot(dforward, Wh.T)
     return dx, dprev_h, dWx, dWh, db
 
 
@@ -93,6 +94,7 @@ def rnn_forward(x, h0, Wx, Wh, b):
 
 
 def bptt(self, x, y):
+    '''from wildml.com'''
     T = len(y)
     # Perform forward propagation
     o, s = self.forward_propagation(x)

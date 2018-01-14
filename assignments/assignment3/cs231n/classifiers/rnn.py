@@ -122,7 +122,7 @@ class CaptioningRNN(object):
     input_for_hidden, cache['W_proj'] = affine_forward(img_features, W_proj)
     # (2) Use a word embedding layer to transform the words in captions_in     #
     #     from indices to vectors, giving an array of shape (N, T, W).         #
-    word_vectors = word_embedding_forward(p\)
+    #word_vectors = word_embedding_forward(p)
     # (3) Use either a vanilla RNN or LSTM (depending on self.cell_type) to    #
     #     process the sequence of input word vectors and produce hidden state  #
     #     vectors for all timesteps, producing an array of shape (N, T, H).    #

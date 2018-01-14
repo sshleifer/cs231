@@ -209,23 +209,26 @@ class CaptioningRNN(object):
     print np.abs(next_h[0] - next_h[1]).mean(), next_h.shape
     last_word = np.array([[self._start] for _ in range(N)])
     h = [next_h]
+    last_capt = self._start * np.ones((N, 1), dtype=np.int32)
     for T in tqdm(range(max_length), desc='Looping over timesteps'):
 
       # print 'step {}'.format(i)
       # (1) Embed the previous word using the learned word embeddings           #
       # (2) Make an RNN step using the previous hidden state and the embedded   #
       #     current word to get the next hidden state.                          #
-      word_vectors, embedding_cache = word_embedding_forward(last_word, W_embed) # captions[:,[-1]]
+      word_vectors, _ = word_embedding_forward(last_capt, W_embed) # captions[:,[-1]]
       prev_h = next_h
-      next_h, cache = rnn_step_forward(word_vectors, prev_h, Wx, Wh, b)
+      # print word_vectors.shape, np.squeeze(word_vectors.shape)
+      next_h, cache = rnn_step_forward(np.squeeze(word_vectors), prev_h, Wx, Wh, b)
       print np.abs(next_h[0] - next_h[1]).mean()
       h.append(next_h)
       # (3) Apply the learned affine transformation to the next hidden state to #
       #     get scores for all words in the vocabulary                          #
-      word_scores, affine_cache = temporal_affine_forward(next_h, W_vocab, b_vocab)
-      last_word = np.argmax(word_scores, axis=2)[:, -1] # largest word score for final timestep
+      word_scores, affine_cache = temporal_affine_forward(next_h[:, np.newaxis, :], W_vocab, b_vocab)
+      last_word = np.squeeze(np.argmax(word_scores, axis=2))
       #captions = np.hstack([captions, best_word.reshape(captions.shape[0], 1)])
       captions[:,T] = last_word
+      last_capt = last_word
 
       # (4) Select the word with the highest score as the next word, writing it #
       #     to the appropriate slot in the captions variable                    #

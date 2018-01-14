@@ -198,48 +198,17 @@ class CaptioningRNN(object):
     Wx, Wh, b = self.params['Wx'], self.params['Wh'], self.params['b']
     W_vocab, b_vocab = self.params['W_vocab'], self.params['b_vocab']
 
-    
-    ###########################################################################
-    # TODO: Implement test-time sampling for the model. You will need to      #
-    # initialize the hidden state of the RNN by applying the learned affine   #
-    # transform to the input image features. The first word that you feed to  #
-    # the RNN should be the <START> token; its value is stored in the         #
-    # variable self._start. At each timestep you will need to do to:          #
-    next_h, _ = affine_forward(img_features, W_proj, b_proj)
-    print np.abs(next_h[0] - next_h[1]).mean(), next_h.shape
+    next_h, _ = affine_forward(img_features, W_proj, b_proj)  # initialize the hidden state of the RNN
     last_word = np.array([[self._start] for _ in range(N)])
-    h = [next_h]
-    last_capt = self._start * np.ones((N, 1), dtype=np.int32)
     for T in tqdm(range(max_length), desc='Looping over timesteps'):
-
-      # print 'step {}'.format(i)
-      # (1) Embed the previous word using the learned word embeddings           #
-      # (2) Make an RNN step using the previous hidden state and the embedded   #
-      #     current word to get the next hidden state.                          #
-      word_vectors, _ = word_embedding_forward(last_capt, W_embed) # captions[:,[-1]]
+      word_vectors, _ = word_embedding_forward(last_word, W_embed) # captions[:,[-1]]
       prev_h = next_h
-      # print word_vectors.shape, np.squeeze(word_vectors.shape)
       next_h, cache = rnn_step_forward(np.squeeze(word_vectors), prev_h, Wx, Wh, b)
-      print np.abs(next_h[0] - next_h[1]).mean()
-      h.append(next_h)
-      # (3) Apply the learned affine transformation to the next hidden state to #
-      #     get scores for all words in the vocabulary                          #
       word_scores, affine_cache = temporal_affine_forward(next_h[:, np.newaxis, :], W_vocab, b_vocab)
       last_word = np.squeeze(np.argmax(word_scores, axis=2))
-      #captions = np.hstack([captions, best_word.reshape(captions.shape[0], 1)])
       captions[:,T] = last_word
-      last_capt = last_word
 
-      # (4) Select the word with the highest score as the next word, writing it #
-      #     to the appropriate slot in the captions variable                    #
-      #                                                                         #
-      # For simplicity, you do not need to stop generating after an <END> token #
-      # is sampled, but you can if you want to.                                 #
-
-      # HINT: You will not be able to use the rnn_forward or lstm_forward       #
-      # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
-      # a loop.                                                                 #
     self.last_word =last_word
-    return captions, h
+    return captions
 
 

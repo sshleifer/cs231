@@ -1,10 +1,11 @@
 import numpy as np
-"""This file defines layer types that are commonly used for recurrent neural networks."""
+
 
 def rel_error(x, y):
     """ returns relative error """
-    assert  x.shape == y.shape, 'x.shape={} but y.shape={}'.format(x.shape, y.shape)
+    assert x.shape == y.shape, 'x.shape={} but y.shape={}'.format(x.shape, y.shape)
     return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
+
 
 def rnn_step_forward(x, prev_h, Wx, Wh, b):
   """
@@ -90,7 +91,34 @@ def rnn_forward(x, h0, Wx, Wh, b):
 
     return np.array(h).transpose(1, 0, 2), cache
 
-def rnn_backward(dh, cache):
+
+def bptt(self, x, y):
+    T = len(y)
+    # Perform forward propagation
+    o, s = self.forward_propagation(x)
+    # We accumulate the gradients in these variables
+    dLdU = np.zeros(self.U.shape)
+    dLdV = np.zeros(self.V.shape)
+    dLdW = np.zeros(self.W.shape)
+    delta_o = o
+    delta_o[np.arange(len(y)), y] -= 1.
+    # For each output backwards...
+    for t in np.arange(T)[::-1]:
+        dLdV += np.outer(delta_o[t], s[t].T)
+        # Initial delta calculation: dL/dz
+        delta_t = self.V.T.dot(delta_o[t]) * (1 - (s[t] ** 2))
+        # Backpropagation through time (for at most self.bptt_truncate steps)
+        for bptt_step in np.arange(max(0, t-self.bptt_truncate), t+1)[::-1]:
+            # print "Backpropagation step t=%d bptt step=%d " % (t, bptt_step)
+            # Add to gradients at each previous step
+            dLdW += np.outer(delta_t, s[bptt_step-1])
+            dLdU[:,x[bptt_step]] += delta_t
+            # Update delta for next step dL/dz at t-1
+            delta_t = self.W.T.dot(delta_t) * (1 - s[bptt_step-1] ** 2)
+    return [dLdU, dLdV, dLdW]
+
+
+def rnn_backward2(dh, cache):
     """
     Compute the backward pass for a vanilla RNN over an entire sequence of data.
 
@@ -104,22 +132,78 @@ def rnn_backward(dh, cache):
     - dWh: Gradient of hidden-to-hidden weights, of shape (H, H)
     - db: Gradient of biases, of shape (H,)
     """
-    N,T,D = dh.shape
-    print N,T,D
-    #grads_dprev_h = np.random.randn(N, H)
-    dx = np.random.randn(N, T, D)
-    # grads_dwx = np.random.randn(D, H)
-    # grads_dwh = np.random.randn(H, H)
-    # grads_db = np.random.randn(H)
-    for i in reversed(range(T)):
-        tmp_dx, dprev_h, dWx, dWh, db = rnn_step_backward(dh[:, i], cache[i])
-        print tmp_dx.shape
-        dx[:,i,:] = tmp_dx
-        print dx.shape
-    for v in [dx, dprev_h, dWx, dWh, db]:
-        print v.shape
+    N,T,H = dh.shape
+    D = cache[0][1].shape[1]
+    # cache = (prev_h, x, b, Wh, Wx, next_h)
+    grads_dprev_h = np.zeros((N, H))
+    dx = np.zeros((T, N, D))  # reshaped
+    dWx = np.zeros((D, H))
+    grads_dwh = np.zeros((H, H))
+    grads_db = np.zeros(H)
+    dh0 = np.zeros((N, H))
+    dh = dh.transpose(1, 0, 2)
+    for i in reversed(xrange(T)):
+        print 'step at T={}'.format(i)
+        dh_current = dh[i] + dh0
+        tmp_dx, dh0, dWxt, dWh, db = rnn_step_backward(dh_current, cache[i])
+        dWx += dWxt
+        # if not isinstance(dWx, np.ndarray):
+        #     dWx = dWxt
+        # else:
+        #     dWx += dWxt
+        print tmp_dx
+        dx[i] += tmp_dx
+    dx = dx.transpose(1, 0, 2)
+    return dx, dh0, dWx, grads_dwh, grads_db
 
-    return dx, dprev_h, dWx, dWh, db
+def rnn_backward(dh, cache):
+    """
+    Compute the backward pass for a vanilla RNN over an entire sequence of data.
+    Inputs:
+    - dh: Upstream gradients of all hidden states, of shape (N, T, H)
+    Returns a tuple of:
+    - dx: Gradient of inputs, of shape (N, T, D)
+    - dh0: Gradient of initial hidden state, of shape (N, H)
+    - dWx: Gradient of input-to-hidden weights, of shape (D, H)
+    - dWh: Gradient of hidden-to-hidden weights, of shape (H, H)
+    - db: Gradient of biases, of shape (H,)
+    """
+    dx, dh0, dWx, dWh, db = None, None, None, None, None
+
+    ##########################################################################
+    # TODO: Implement the backward pass for a vanilla RNN running an entire      #
+    # sequence of data. You should use the rnn_step_backward function that you   #
+    # defined above.                                                             #
+    ##########################################################################
+    # Backprop into the rnn.
+
+    # Dimensions
+    N, T, H = dh.shape
+    D = cache[0][1].shape[1]
+
+    # Initialize dx,dh0,dWx,dWh,db
+    dx = np.zeros((T, N, D))
+    dh0 = np.zeros((N, H))
+    db = np.zeros((H))
+    dWh = np.zeros((H, H))
+    dWx = np.zeros((D, H))
+
+    # On transpose dh
+    dh = dh.transpose(1, 0, 2)
+    dh_prev = np.zeros((N, H))
+
+    for t in reversed(xrange(T)):
+        dh_current = dh[t] + dh_prev
+        dx_t, dh_prev, dWx_t, dWh_t, db_t = rnn_step_backward(
+            dh_current, cache[t])
+        dx[t] = dx_t
+        dh0 = dh_prev
+        dWx += dWx_t
+        dWh += dWh_t
+        db += db_t
+
+    dx = dx.transpose(1, 0, 2)
+    return dx, dh0, dWx, dWh, db
 
 
 def word_embedding_forward(x, W):

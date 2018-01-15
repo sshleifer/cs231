@@ -89,7 +89,8 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
   cache = (prev_h, x, Wh, Wx, forward)
   return next_h, cache
 
-
+def dsigmoid(x):
+    return sigmoid(x) * (1-sigmoid(x))
 
 def rnn_step_backward(dnext_h, cache):
     """
@@ -171,7 +172,6 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     - next_c: Next cell state, of shape (N, H)
     - cache: Tuple of values needed for backward pass.
     """
-    next_h, next_c, cache = None, None, None
     a = x.dot(Wx) + prev_h.dot(Wh) + b
     ai, af, ao, ag = np.split(a, 4, axis=1)
     i = sigmoid(ai)
@@ -180,39 +180,57 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     g = np.tanh(ag)
     next_c = np.multiply(f, prev_c) + np.multiply(i, g)
     next_h = np.multiply(o, np.tanh(next_c))
+    cache = (a, ai, af, ao, ag, i, f, o, g, next_h, next_c, Wx, Wh, b, prev_c, prev_h, x)
     return next_h, next_c, cache
 
+def tanh_deriv(x):
+    return 1.0 - np.tanh(x)**2
 
 def lstm_step_backward(dnext_h, dnext_c, cache):
-  """
-  Backward pass for a single timestep of an LSTM.
-  
-  Inputs:
-  - dnext_h: Gradients of next hidden state, of shape (N, H)
-  - dnext_c: Gradients of next cell state, of shape (N, H)
-  - cache: Values from the forward pass
-  
-  Returns a tuple of:
-  - dx: Gradient of input data, of shape (N, D)
-  - dprev_h: Gradient of previous hidden state, of shape (N, H)
-  - dprev_c: Gradient of previous cell state, of shape (N, H)
-  - dWx: Gradient of input-to-hidden weights, of shape (D, 4H)
-  - dWh: Gradient of hidden-to-hidden weights, of shape (H, 4H)
-  - db: Gradient of biases, of shape (4H,)
-  """
-  dx, dh, dc, dWx, dWh, db = None, None, None, None, None, None
-  #############################################################################
-  # TODO: Implement the backward pass for a single timestep of an LSTM.       #
-  #                                                                           #
-  # HINT: For sigmoid and tanh you can compute local derivatives in terms of  #
-  # the output value from the nonlinearity.                                   #
-  #############################################################################
-  pass
-  ##############################################################################
-  #                               END OF YOUR CODE                             #
-  ##############################################################################
+    """
+    Backward pass for a single timestep of an LSTM.
 
-  return dx, dprev_h, dprev_c, dWx, dWh, db
+    Inputs:
+    - dnext_h: Gradients of next hidden state, of shape (N, H)
+    - dnext_c: Gradients of next cell state, of shape (N, H)
+    - cache: Values from the forward pass
+
+    Returns a tuple of:
+    - dx: Gradient of input data, of shape (N, D)
+    - dprev_h: Gradient of previous hidden state, of shape (N, H)
+    - dprev_c: Gradient of previous cell state, of shape (N, H)
+    - dWx: Gradient of input-to-hidden weights, of shape (D, 4H)
+    - dWh: Gradient of hidden-to-hidden weights, of shape (H, 4H)
+    - db: Gradient of biases, of shape (4H,)
+    """
+    a, ai, af, ao, ag, i, f, o, g, next_h, next_c, Wx, Wh, bias, prev_c, prev_h, x = cache
+    D,h4 = Wx.shape
+
+    dnext_h_do = np.tanh(next_c)
+    dnext_h_d_next_c = o
+    # dnext_c += dnext_h_d_next_c  # next_c influences gradients through h, also
+    dprev_c = f
+    dnext_c_di = g
+    dnext_c_dg = i
+    dai = dsigmoid(dnext_c_di)
+    dag = tanh_deriv(dnext_c_dg)
+    daf = dsigmoid(prev_c)
+
+
+    dnext_h_dao = dsigmoid(ao) * dnext_h_do
+
+    da = np.hstack([dai, daf, dnext_h_dao, dag])
+    #import pdb; pdb.set_trace()
+    dx = np.dot(da, Wx.T) #+ np.dot(da, Wh.T)
+    dWx = np.dot(x.T, da) #+ np.dot(da, Wh.T)
+    dprev_h = np.dot(da, Wh.T)
+    dWh = np.dot(prev_h.T, da)
+
+    db = da.sum(0) + da.sum(0)
+    # HINT: For sigmoid and tanh you can compute  local derivatives in terms of  #
+    # the output value from the nonlinearity.                                   #
+    return dx, dprev_h, dprev_c, dWx, dWh, db
+
 
 def rnn_backward(dh, cache):
     """

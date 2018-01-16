@@ -330,13 +330,11 @@ def lstm_backward(dh, cache):
   - dWh: Gradient of hidden-to-hidden weight matrix of shape (H, 4H)
   - db: Gradient of biases, of shape (4H,)
   """
-  dx, dh0, dWx, dWh, db = None, None, None, None, None
   a, ai, af, ao, ag, i, f, o, g, next_h, next_c, Wx, Wh, b, prev_c, prev_h, x = cache[-1]
-  dnext_c = np.zeros_like(prev_c)
+  prev_c = np.zeros_like(prev_c)
   N, D = cache[0][-1].shape
   H = cache[0][-2].shape[1]
   T = len(cache)
-  grads_dh = np.zeros((N, H))
   dx = np.zeros((T, N, D))  # reshaped
   dWx = np.zeros((D, H*4))
   grads_dwh = np.zeros((H, H*4))
@@ -345,7 +343,8 @@ def lstm_backward(dh, cache):
   dh = dh.transpose(1, 0, 2)  # from N,T,H to T,N,H to faciliate loop
   for i in reversed(xrange(T)):
       dh_current = dh[i] + dh0
-      tmp_dx, dh0, dnext_c, dWxt, dWh, db = lstm_step_backward(dh_current, dnext_c, cache[i])
+      tmp_dx, dh0, dnext_c, dWxt, dWh, db = lstm_step_backward(dh_current, prev_c, cache[i])
+      prev_c = dnext_c
       dWx += dWxt
       grads_dwh += dWh
       grads_db += db

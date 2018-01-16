@@ -128,18 +128,23 @@ class CaptioningRNN(object):
     #     process the sequence of input word vectors and produce hidden state  #
     #     vectors for all timesteps, producing an array of shape (N, T, H).    #
     if self.cell_type == 'rnn':
-      forward_func = rnn_forward
-      backward_func = rnn_backward
-    else:
-      raise NotImplementedError('have not implemented LSTM yet')
-    print word_vectors.shape, input_for_hidden.shape
-    rnn_output, cache = forward_func(
+      rnn_output, cache = rnn_forward(
         word_vectors,
         input_for_hidden,
         self.params['Wx'],
         self.params['Wh'],
         self.params['b']
       )
+      backward_func = rnn_backward
+    else:
+      rnn_output, cache = lstm_forward(
+        word_vectors,
+        input_for_hidden,
+        self.params['Wx'],
+        self.params['Wh'],
+        self.params['b']
+      )
+      backward_func = lstm_backward
     # (4) Use a (temporal) affine transformation to compute scores over the    #
     #     vocabulary at every timestep using the hidden states, giving an      #
     #     array of shape (N, T, V).                                            #
@@ -158,6 +163,7 @@ class CaptioningRNN(object):
     # gradients for self.params[k].                                            #
     ############################################################################
     drnn, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dout, affine_cache)
+
     dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = backward_func(drnn, cache)
 
     _, grads['W_proj'], grads['b_proj'] = affine_backward(dh0, cache_proj)
@@ -199,11 +205,18 @@ class CaptioningRNN(object):
     W_vocab, b_vocab = self.params['W_vocab'], self.params['b_vocab']
 
     next_h, _ = affine_forward(img_features, W_proj, b_proj)  # initialize the hidden state of the RNN
+    prev_c = np.zeros_like(next_h)
+
     last_word = np.array([[self._start] for _ in range(N)])
+    c = np.zeros(())
     for T in tqdm(range(max_length), desc='Looping over timesteps'):
       word_vectors, _ = word_embedding_forward(last_word, W_embed) # captions[:,[-1]]
       prev_h = next_h
-      next_h, cache = rnn_step_forward(np.squeeze(word_vectors), prev_h, Wx, Wh, b)
+      if self.cell_type == 'rnn':
+        next_h, cache = rnn_step_forward(np.squeeze(word_vectors), prev_h, Wx, Wh, b)
+      else:
+        next_h, next_c, cache_next = lstm_step_forward(np.squeeze(word_vectors), prev_h, prev_c, Wx, Wh, b)
+        #prev_c = next_c
       word_scores, affine_cache = temporal_affine_forward(next_h[:, np.newaxis, :], W_vocab, b_vocab)
       last_word = np.squeeze(np.argmax(word_scores, axis=2))
       captions[:,T] = last_word

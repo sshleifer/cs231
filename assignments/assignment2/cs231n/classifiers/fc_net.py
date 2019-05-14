@@ -206,7 +206,6 @@ class FullyConnectedNet(object):
       return scores
 
     loss, dout = softmax_loss(scores, y)
-    grads = {}
     reg_losses = [np.sum(v * v) for k, v in self.params.items()
                   if k.startswith('W')]
     reg_loss = np.sum(reg_losses) * self.reg * .5

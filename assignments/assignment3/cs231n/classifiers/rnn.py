@@ -216,7 +216,6 @@ class CaptioningRNN(object):
         next_h, cache = rnn_step_forward(np.squeeze(word_vectors), prev_h, Wx, Wh, b)
       else:
         next_h, next_c, cache_next = lstm_step_forward(np.squeeze(word_vectors), prev_h, prev_c, Wx, Wh, b)
-        #prev_c = next_c
       word_scores, affine_cache = temporal_affine_forward(next_h[:, np.newaxis, :], W_vocab, b_vocab)
       last_word = np.squeeze(np.argmax(word_scores, axis=2))
       captions[:,T] = last_word
